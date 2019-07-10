@@ -70,6 +70,8 @@ class CPDataset(data.Dataset):
         parse_name = im_name.replace('.jpg', '.png')
         im_parse = Image.open(osp.join(self.data_path, 'image-parse', parse_name))
         parse_array = np.array(im_parse)
+        if len(np.array(im_parse).shape)==3:
+            parse_array = parse_array[:,:,0]
         parse_shape = (parse_array > 0).astype(np.float32)
         parse_head = (parse_array == 1).astype(np.float32) + \
                 (parse_array == 2).astype(np.float32) + \
@@ -78,7 +80,7 @@ class CPDataset(data.Dataset):
         parse_cloth = (parse_array == 5).astype(np.float32) + \
                 (parse_array == 6).astype(np.float32) + \
                 (parse_array == 7).astype(np.float32)
-       
+        parse_cloth_top = (parse_array == 5).astype(np.float32)       
         # shape downsample
         parse_shape = Image.fromarray((parse_shape*255).astype(np.uint8))
         parse_shape = parse_shape.resize((self.fine_width//16, self.fine_height//16), Image.BILINEAR)
@@ -86,7 +88,9 @@ class CPDataset(data.Dataset):
         shape = self.transform(parse_shape) # [-1,1]
         phead = torch.from_numpy(parse_head) # [0,1]
         pcm = torch.from_numpy(parse_cloth) # [0,1]
-
+        pcm_top = Image.fromarray((parse_cloth_top*255).astype(np.uint8))
+        pcm_top = self.transform(pcm_top) # [-1,1]
+         
         # upper cloth
         im_c = im * pcm + (1 - pcm) # [-1,1], fill 1 for other parts
         im_h = im * phead - (1 - phead) # [-1,1], fill 0 for other parts
@@ -119,7 +123,7 @@ class CPDataset(data.Dataset):
         im_pose = self.transform(im_pose)
         
         # cloth-agnostic representation
-        agnostic = torch.cat([shape, im_h, pose_map], 0) 
+        agnostic = torch.cat([shape, im_h, pose_map, pcm_top], 0) 
 
         if self.stage == 'GMM':
             im_g = Image.open('grid.png')
@@ -139,6 +143,7 @@ class CPDataset(data.Dataset):
             'head': im_h,           # for visualization
             'pose_image': im_pose,  # for visualization
             'grid_image': im_g,     # for visualization
+            'top_cloth_parse': pcm_top,
             }
 
         return result
