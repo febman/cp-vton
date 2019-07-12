@@ -61,13 +61,13 @@ def train_gmm(opt, train_loader, model, board):
         im_pose = inputs['pose_image'].cuda()
         im_h = inputs['head'].cuda()
         shape = inputs['shape'].cuda()
-        agnostic_cloth = inputs['agnostic_cloth'].cuda()
+        agnostic = inputs['agnostic'].cuda()
         c = inputs['cloth'].cuda()
         cm = inputs['cloth_mask'].cuda()
         im_c =  inputs['parse_cloth'].cuda()
         im_g = inputs['grid_image'].cuda()
             
-        grid, theta = model(agnostic_cloth, c)
+        grid, theta = model(agnostic, c)
         warped_cloth = F.grid_sample(c, grid, padding_mode='border')
         warped_mask = F.grid_sample(cm, grid, padding_mode='zeros')
         warped_grid = F.grid_sample(im_g, grid, padding_mode='zeros')
@@ -114,11 +114,11 @@ def train_tom(opt, train_loader, model, board):
         im_h = inputs['head']
         shape = inputs['shape']
 
-        agnostic_cloth = inputs['agnostic_cloth'].cuda()
+        agnostic = inputs['agnostic'].cuda()
         c = inputs['cloth'].cuda()
         cm = inputs['cloth_mask'].cuda()
         
-        outputs = model(torch.cat([agnostic_cloth, c],1))
+        outputs = model(torch.cat([agnostic, c],1))
         p_rendered, m_composite = torch.split(outputs, 3,1)
         p_rendered = F.tanh(p_rendered)
         m_composite = F.sigmoid(m_composite)
@@ -176,7 +176,7 @@ def main():
         train_gmm(opt, train_loader, model, board)
         save_checkpoint(model, os.path.join(opt.checkpoint_dir, opt.name, 'gmm_final.pth'))
     elif opt.stage == 'TOM':
-        model = UnetGenerator(26, 4, 6, ngf=64, norm_layer=nn.InstanceNorm2d)
+        model = UnetGenerator(25, 4, 6, ngf=64, norm_layer=nn.InstanceNorm2d)
         if not opt.checkpoint =='' and os.path.exists(opt.checkpoint):
             load_checkpoint(model, opt.checkpoint)
         train_tom(opt, train_loader, model, board)
