@@ -85,7 +85,7 @@ class FeatureCorrelation(nn.Module):
     def __init__(self):
         super(FeatureCorrelation, self).__init__()
     
-    def forward(self, feature_A, feature_B):
+    def forward(self, feature_A, feature_B, tightness_vector):
         b,c,h,w = feature_A.size()
         # reshape features for matrix multiplication
         feature_A = feature_A.transpose(2,3).contiguous().view(b,c,h*w)
@@ -93,7 +93,9 @@ class FeatureCorrelation(nn.Module):
         # perform matrix mult.
         feature_mul = torch.bmm(feature_B,feature_A)
         correlation_tensor = feature_mul.view(b,h,w,h*w).transpose(2,3).transpose(1,2)
-        return correlation_tensor
+        tightness_tensor =  tightness_vector.view(b,1,h,w)
+        correlation_tensor2 = torch.cat((correlation_tensor, tightness_tensor),1)
+        return correlation_tensor2
     
 class FeatureRegression(nn.Module):
     def __init__(self, input_nc=512,output_dim=6, use_cuda=True):
@@ -409,15 +411,15 @@ class GMM(nn.Module):
         self.extractionB = FeatureExtraction(3, ngf=64, n_layers=3, norm_layer=nn.BatchNorm2d)
         self.l2norm = FeatureL2Norm()
         self.correlation = FeatureCorrelation()
-        self.regression = FeatureRegression(input_nc=192, output_dim=2*opt.grid_size**2, use_cuda=True)
+        self.regression = FeatureRegression(input_nc=193, output_dim=2*opt.grid_size**2, use_cuda=True)
         self.gridGen = TpsGridGen(opt.fine_height, opt.fine_width, use_cuda=True, grid_size=opt.grid_size)
         
-    def forward(self, inputA, inputB):
+    def forward(self, inputA, inputB, tightness_vector):
         featureA = self.extractionA(inputA)
         featureB = self.extractionB(inputB)
         featureA = self.l2norm(featureA)
         featureB = self.l2norm(featureB)
-        correlation = self.correlation(featureA, featureB)
+        correlation = self.correlation(featureA, featureB, tightness_vector)
 
         theta = self.regression(correlation)
         grid = self.gridGen(theta)
