@@ -296,10 +296,10 @@ class UnetGenerator(nn.Module):
         unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
         unet_block = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer)
 
-        self.model = unet_block
+        self.model3 = unet_block
 
-    def forward(self, input):
-        return self.model(input)
+    def forward(self, inputx, tightness_vector_tom):
+        return self.model3(inputx, tightness_vector_tom)
 
 
 # Defines the submodule with skip connection.
@@ -310,6 +310,7 @@ class UnetSkipConnectionBlock(nn.Module):
                  submodule=None, outermost=False, innermost=False, norm_layer=nn.BatchNorm2d, use_dropout=False):
         super(UnetSkipConnectionBlock, self).__init__()
         self.outermost = outermost
+        self.innermost = innermost
         use_bias = norm_layer == nn.InstanceNorm2d
 
         if input_nc is None:
@@ -327,12 +328,19 @@ class UnetSkipConnectionBlock(nn.Module):
             down = [downconv]
             up = [uprelu, upsample, upconv, upnorm]
             model = down + [submodule] + up
+            self.down = nn.Sequential(*down)
+            self.up = nn.Sequential(*up)
+            self.submodule = submodule
+            return
         elif innermost:
             upsample = nn.Upsample(scale_factor=2, mode='bilinear')
-            upconv = nn.Conv2d(inner_nc, outer_nc, kernel_size=3, stride=1, padding=1, bias=use_bias)
+            upconv = nn.Conv2d(inner_nc+1, outer_nc, kernel_size=3, stride=1, padding=1, bias=use_bias)
             down = [downrelu, downconv]
             up = [uprelu, upsample, upconv, upnorm]
-            model = down + up
+            #model = down + up
+            self.down = nn.Sequential(*down)
+            self.up = nn.Sequential(*up)
+            return
         else:
             upsample = nn.Upsample(scale_factor=2, mode='bilinear')
             upconv = nn.Conv2d(inner_nc*2, outer_nc, kernel_size=3, stride=1, padding=1, bias=use_bias)
@@ -340,17 +348,36 @@ class UnetSkipConnectionBlock(nn.Module):
             up = [uprelu, upsample, upconv, upnorm]
 
             if use_dropout:
-                model = down + [submodule] + up + [nn.Dropout(0.5)]
+                up = up + [nn.Dropout(0.5)]
             else:
-                model = down + [submodule] + up
+                up = up
+            self.down = nn.Sequential(*down)
+            self.up = nn.Sequential(*up)
+            self.submodule = submodule
+            return
+        #self.model2 = nn.Sequential(*model)
 
-        self.model = nn.Sequential(*model)
-
-    def forward(self, x):
+    def forward(self, x, tightness_vector_tom):
         if self.outermost:
-            return self.model(x)
+            #return self.model2(x)
+            down_result = self.down(x)
+            submodule_result = self.submodule(down_result, tightness_vector_tom)
+            up_result = self.up(submodule_result)
+            return up_result
         else:
-            return torch.cat([x, self.model(x)], 1)
+            if self.innermost:
+                result_down = self.down(x)
+                b,c,h,w = result_down.size()
+                tightness_tensor =  tightness_vector_tom.view(b,1,h,w)
+                concatenate_result = torch.cat((result_down, tightness_tensor),1)
+                up_result = self.up(concatenate_result)
+                
+                return torch.cat([x, up_result], 1)
+            else:
+                down_result = self.down(x)
+                submodule_result = self.submodule(down_result, tightness_vector_tom)
+                up_result = self.up(submodule_result)
+                return torch.cat([x, up_result], 1)
 
 class Vgg19(nn.Module):
     def __init__(self, requires_grad=False):

@@ -117,8 +117,9 @@ def train_tom(opt, train_loader, model, board):
         agnostic = inputs['agnostic'].cuda()
         c = inputs['cloth'].cuda()
         cm = inputs['cloth_mask'].cuda()
-        
-        outputs = model(torch.cat([agnostic, c],1))
+        tightness_vector = inputs['insert_vector_tom'].cuda()        
+
+        outputs = model(torch.cat([agnostic, c],1), tightness_vector)
         p_rendered, m_composite = torch.split(outputs, 3,1)
         p_rendered = F.tanh(p_rendered)
         m_composite = F.sigmoid(m_composite)

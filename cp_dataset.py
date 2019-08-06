@@ -133,6 +133,11 @@ class CPDataset(data.Dataset):
             im_g = ''
         all_cloth_tightness = np.load('/home/ubuntu/cp-vton/data/all_cloth_tightness_vector.npy',encoding="latin1").tolist()
         insert_vector = all_cloth_tightness[c_name].astype(np.float32)
+
+        value = np.sum(all_cloth_tightness[c_name].astype(np.float32))/(16*12)
+        insert_vector_tom = (value*np.ones([4,3])).astype(np.float32)
+
+
         result = {
             'c_name':   c_name,     # for visualization
             'im_name':  im_name,    # for visualization or ground truth
@@ -148,6 +153,7 @@ class CPDataset(data.Dataset):
             'top_cloth_parse': pcm_top,
             'agnostic_cloth': agnostic_cloth,
             'insert_vector': insert_vector,
+            'insert_vector_tom': insert_vector_tom,
             }
 
         return result
