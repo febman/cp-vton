@@ -1,6 +1,6 @@
 # Toward Characteristic-Preserving Image-based Virtual Try-On Network
 
-Reimplemented code for eccv2018 paper 'Toward Characteristic-Preserving Image-based Virtual Try-On Network'. 
+Reimplemented code for eccv2018 paper 'Toward Characteristic-Preserving Image-based Virtual Try-On Network'.
 
 The results may have some differences with those of the original code.
 
@@ -8,7 +8,8 @@ This code is tested with pytorch=0.4.0
 
 ## Data preprocessing
 
-We convert the original data [VITON](https://github.com/xthan/VITON) into different directories for easily use. 
+
+We convert the original data [VITON](https://github.com/xthan/VITON) into different directories for easily use.
 
 Run the matlab code ```convert_data.m ``` under the original data root ```VITON/data```, and get the new format.
 
@@ -21,7 +22,7 @@ You can get the processed data at [GoogleDrive](https://drive.google.com/open?id
 ## Geometric Matching Module
 
 ### training
-We just use L1 loss for criterion in this code. 
+We just use L1 loss for criterion in this code.
 
 TV norm constraints for the offsets will make GMM more robust.
 
@@ -53,12 +54,12 @@ You can see the results in tensorboard, as show below.
 
 ## Try-On Module
 ### training
-Before the trainning, you should generate warp-mask & warp-cloth, using the test process of GMM with `--datamode train`. 
+Before the trainning, you should generate warp-mask & warp-cloth, using the test process of GMM with `--datamode train`.
 Then move these files or make soft links under the directory `data/train`.
 An example training command is
 
 ```
-python train.py --name tom_train_new --stage TOM --workers 4 --save_count 5000 --shuffle 
+python train.py --name tom_train_new --stage TOM --workers 4 --save_count 5000 --shuffle
 ```
 You can see the results in tensorboard, as show below.
 
@@ -93,5 +94,3 @@ If this code helps your research, please cite our paper:
 		pages={589--604},
 		year={2018}
 	}
-
-
